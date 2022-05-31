@@ -1,0 +1,47 @@
+[
+  {
+    "title": "The Talisman",
+    "year": 1984,
+    "pages": 656,
+    "author": [
+      {
+        "name": "Stephen King",
+        "country": "United States"
+      },
+      {
+        "name": "Peter Straub",
+        "country": "United States"
+      }
+    ]
+  },
+  {
+    "title": "The Explorers Guild",
+    "year": 2015,
+    "pages": 792,
+    "author": [
+      {
+        "name": "Jonathan Baird",
+        "country": "United States"
+      },
+      {
+        "name": "Kevin Costner",
+        "country": "United States"
+      }
+    ]
+  },
+  {
+    "title": "Welcome to Night Vale",
+    "year": 2015,
+    "pages": 416,
+    "author": [
+      {
+        "name": "Jeffrey Cranor",
+        "country": "United States"
+      },
+      {
+        "name": "Joseph Fink",
+        "country": "United States"
+      }
+    ]
+  }
+]

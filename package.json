@@ -1,0 +1,17 @@
+{
+  "name": "personalhobbyapp",
+  "version": "1.0.0",
+  "description": "This is my PHP application ",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Anass Abounouh",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "mongoose": "^6.3.4"
+  }
+}

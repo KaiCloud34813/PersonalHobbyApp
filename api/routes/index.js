@@ -11,7 +11,7 @@ router
   .get(booksController.getOne)
   .delete(booksController.deleteOne)
   .put(booksController.fullUpdateOne)
-  .patch();
+  .patch(booksController.partialUpdateOne);
 
 router
   .route("/books/:bookId/author")
@@ -21,6 +21,8 @@ router
 router
   .route("/books/:bookId/author/:authorId")
   .get(authorController.getOne)
-  .delete(authorController.deleteOne);
+  .delete(authorController.deleteOne)
+  .put(authorController.fullUpdateOne)
+  .patch(authorController.partialUpdateOne);
 
 module.exports = router;

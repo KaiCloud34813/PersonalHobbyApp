@@ -89,10 +89,60 @@ module.exports.fullUpdateOne = function (req, res) {
             response.message = err;
           } else {
             response.status = 202;
-            response.message = updatedGame;
+            response.message = updatedBook;
           }
           res.status(response.status).send(response.message);
         });
+      }
+    });
+  }
+};
+
+module.exports.partialUpdateOne = function (req, res) {
+  console.log("Partial update of One Book");
+
+  const bookId = req.params.bookId;
+  if (mongoose.isValidObjectId(bookId)) {
+    Book.findById(bookId).exec(function (err, book) {
+      const response = {
+        status: 200,
+        message: book,
+      };
+
+      if (!book) {
+        console.log("Book not found");
+        response.status = 404;
+        response.message = { message: "book with the given Id not found" };
+      } else {
+        if (req.body.title) {
+          book.title = req.body.title;
+        }
+
+        if (req.body.year) {
+          book.year = req.body.year;
+        }
+
+        if (req.body.pages) {
+          book.pages = req.body.pages;
+        }
+
+        if (req.body.author) {
+          book.author = req.body.author;
+        }
+
+        book.save(function (err, updatedBook) {
+          if (err) {
+            response.status = 500;
+
+            response.message = err;
+          } else {
+            response.status = 202;
+
+            response.status = updatedBook;
+          }
+        });
+
+        res.status(response.status).json(response.message);
       }
     });
   }

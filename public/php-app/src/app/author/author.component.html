@@ -1,0 +1,8 @@
+<h1>{{ author.name.split(" ")[0] }}</h1>
+<button routerLink="/books/{{ bookId }}/author/{{ author._id }}/edit">
+  Edit</button
+><br />
+
+Full name: {{ author.name }} <br />
+Country of Origin: {{ author.country }} <br />
+<button (click)="delete(bookId, author._id)">delete</button>

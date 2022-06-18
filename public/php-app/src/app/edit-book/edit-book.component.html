@@ -1,0 +1,17 @@
+<form #bookForm="ngForm" (ngSubmit)="editBook(bookForm)">
+  <div>
+    <label>
+      Title: <input name="title" placeholder="title" [(ngModel)]="book.title" />
+    </label>
+    <br />
+    <label>
+      Year:<input name="year" placeholder="year" [(ngModel)]="book.year" />
+    </label>
+    <br />
+    <label>
+      Pages: <input name="pages" placeholder="pages" [(ngModel)]="book.pages" />
+    </label>
+    <br />
+    <button type="submit">edit Book</button>
+  </div>
+</form>

@@ -1,0 +1,27 @@
+<p style="color: aqua">{{ successMsg }}</p>
+
+<form [formGroup]="registrationForm" (ngSubmit)="onSubmit(registrationForm)">
+  <div>
+    <label> Name: </label> <br />
+
+    <input formControlName="name" placeholder="name" />
+
+    <br />
+
+    <label> UserName : </label>
+
+    <br /><input formControlName="username" placeholder="username" />
+
+    <br />
+
+    <label> Password : </label>
+
+    <br /><input formControlName="password" placeholder="password" />
+
+    <br />
+
+    <p style="color: red">{{ errorMsg }}</p>
+
+    <button type="submit">Register</button>
+  </div>
+</form>

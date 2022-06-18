@@ -1,0 +1,5 @@
+<nav>
+  <button (click)="onHome()">Home</button>
+  <button *ngIf="isLoggedIn" (click)="onBooks()">Books</button>
+  <button *ngIf="!isLoggedIn" (click)="onRegister()">Register</button>
+</nav>

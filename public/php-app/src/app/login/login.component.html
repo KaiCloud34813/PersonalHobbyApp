@@ -1,0 +1,25 @@
+<form
+  *ngIf="!isLoggedIn"
+  #loginForm="ngForm"
+  (ngSubmit)="onSubmit(loginForm)"
+  style="display: inline; float: right"
+>
+  <div>
+    <label>
+      UserName: <input name="username" placeholder="UserName" ngModel />
+    </label>
+
+    <label>
+      Password:
+      <input name="password" placeholder="Password" type="Password" ngModel />
+    </label>
+
+    <button type="submit">logIn</button>
+  </div>
+</form>
+
+<h3 style="display: inline; float: right" *ngIf="isLoggedIn">
+  Welcome {{ name }}
+
+  <button (click)="logout()">Logout</button>
+</h3>

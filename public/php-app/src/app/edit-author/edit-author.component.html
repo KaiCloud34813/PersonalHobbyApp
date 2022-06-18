@@ -1,0 +1,20 @@
+
+<form #authorForm="ngForm" (ngSubmit)="editAuthor(authorForm)">
+  <div>
+    <label>
+      Full name:
+      <input name="name" placeholder="name" [(ngModel)]="author.name" />
+    </label>
+    <br />
+    <label>
+      Country:
+      <input
+        name="country"
+        placeholder="country"
+        [(ngModel)]="author.country"
+      />
+    </label>
+    <br />
+    <button type="submit">edit Author</button>
+  </div>
+</form>

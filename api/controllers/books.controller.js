@@ -2,55 +2,48 @@ const mongoose = require("mongoose");
 const Book = mongoose.model(process.env.DB_BOOK_MODEL);
 
 let getAll = function (req, res) {
-  let offset = parseInt(process.env.DEFAULT_OFFSET, 10);
-  let count = parseInt(process.env.DEFAULT_COUNT, 10);
-  const max = parseInt(process.env.MAX, 10);
-  if (req.query && req.query.offset) {
-    offset = parseInt(req.query.offset, 10);
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
+  const limit = _checkHardening(req, res, response);
+
+  if (limit.error) {
+    _sendResponse(res, response);
+  } else {
+    Book.find()
+      .skip(limit.offset)
+      .limit(limit.count)
+      .exec()
+      .then((books) =>
+        _fillResponse(response, process.env.STATUS_SUCCESS, books)
+      )
+      .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+      .finally(() => _sendResponse(res, response));
   }
-  if (req.query && req.query.count) {
-    count = parseInt(req.query.count, 10);
-  }
-  if (isNaN(offset) || isNaN(count)) {
-    res.status(400).json({ message: "offset and count should be numbers." });
-    return;
-  }
-  if (count > max) {
-    res.status(400).json({ message: "Cannot exceed count of: ", max });
-    return;
-  }
-  Book.find()
-    .skip(offset)
-    .limit(count)
-    .exec(function (err, book) {
-      const response = { status: 200, message: book };
-      if (err) {
-        response.status = 500;
-        response.message = err;
-      } else if (!book) {
-        response.status = 404;
-        response.message = "no book was found";
-      }
-      res.status(response.status).json(response.message);
-    });
 };
 
 let getOne = function (req, res) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
   const bookId = req.params.bookId;
-  Book.findById(bookId).exec(function (err, book) {
-    const response = { status: 200, message: book };
-    if (err) {
-      response.status = 500;
-      response.message = err;
-    } else if (!book) {
-      response.status = 404;
-      response.message = "book with id " + bookId + " was not found.";
-    }
-    res.status(response.status).json(response.message);
-  });
+
+  Book.findById(bookId)
+    .exec()
+    .then((book) => {
+      if (!book) {
+        _fillResponse(
+          response,
+          process.env.STATUS_NOT_FOUND,
+          process.env.NOT_FOUND_MESSAGE
+        );
+      } else {
+        _fillResponse(response, process.env.STATUS_SUCCESS, book);
+      }
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
 };
 
 let addOne = function (req, res) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
+
   const newBook = {
     title: req.body.title,
     year: req.body.year,
@@ -58,175 +51,145 @@ let addOne = function (req, res) {
     author: [],
   };
 
-  Book.create(newBook, function (err, book) {
-    const response = { status: 201, message: book };
-    if (err) {
-      response.status = 500;
-      response.message = err;
-    }
-    res.status(response.status).json(response.message);
-  });
+  Book.create(newBook)
+    .then((book) => _fillResponse(response, process.env.STATUS_CREATED, book))
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
 };
 
 let deleteOne = function (req, res) {
+  const response = {
+    status: process.env.STATUS_NO_CONTENT_SUCCESS,
+    message: "",
+  };
   const bookId = req.params.bookId;
-  Book.findByIdAndDelete(bookId).exec(function (err, deletedBook) {
-    const response = { status: 204, message: deletedBook };
-    if (err) {
-      response.status = 500;
-      response.message = err;
-    } else if (!deletedBook) {
-      response.status = 404;
-      response.message = {
-        message: "Book ID not found",
-      };
-    }
-    res.status(response.status).json(response.message);
-  });
+
+  Book.findByIdAndDelete(bookId)
+    .exec()
+    .then((deletedbook) => {
+      if (!deletedbook) {
+        _fillResponse(
+          response,
+          process.env.STATUS_NOT_FOUND,
+          process.env.STATUS_NO_CONTENT_SUCCESS
+        );
+      } else {
+        _fillResponse(response, process.env.STATUS_SUCCESS, deletedbook);
+      }
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
 };
 
-const _updateOne = function (req, res, updateBookCallback) {
+const _updateOne = function (req, res, updatedBookCallBack) {
+  const response = {
+    status: process.env.STATUS_SUCCESS,
+    message: "",
+  };
   const bookId = req.params.bookId;
-  Book.findById(bookId).exec(function (err, book) {
-    const response = { status: 200, message: book };
-    if (err) {
-      response.status = 500;
-      response.message = err;
-    } else if (!book) {
-      response.status = 404;
-      response.message = { message: "book with given id is not in db" };
-    }
-    if (response.status !== 204) {
-      res.status(response.status).json(response.message);
-    } else {
-      updateBookCallback(req, res, book, response);
-    }
-  });
+  Book.findById(bookId)
+    .exec()
+    .then((book) => {
+      if (!book) {
+        _fillResponse(
+          response,
+          process.env.STATUS_NOT_FOUND,
+          process.env.NOT_FOUND_MESSAGE
+        );
+      } else {
+        updatedBookCallBack(req, res, book);
+      }
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err));
 };
 
-let fullUpdateOne = function (req, res) {
-  bookUpdate = function (req, res, book, response) {
+const _fullBookUpdate = function (req, res, book) {
+  const response = { status: 204, message: "" };
+  book.title = req.body.title;
+  book.year = req.body.year;
+  book.pages = req.body.pages;
+  book.author = req.body.author;
+
+  book
+    .save()
+    .then((book) => {
+      _fillResponse(response, process.env.STATUS_SUCCESS, book);
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
+};
+
+const fullUpdateOne = function (req, res) {
+  _updateOne(req, res, _fullBookUpdate);
+};
+
+const _partialBookUpdate = function (req, res, book) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
+  if (req.body.title) {
     book.title = req.body.title;
+  }
+  if (req.body.year) {
     book.year = req.body.year;
+  }
+  if (req.body.pages) {
     book.pages = req.body.pages;
+  }
+  if (req.body.author) {
     book.author = req.body.author;
-    book.save(function (err, updatedBook) {
-      if (err) {
-        response.status = 500;
-        response.message = err;
-      }
-      res.status(response.status).json(response.message);
-    });
-  };
-  _updateOne(req, res, bookUpdate);
+  }
+  book
+    .save()
+    .then((book) => {
+      _fillResponse(response, process.env.STATUS_SUCCESS, book);
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
+};
+const partialUpdateOne = function (req, res) {
+  _updateOne(req, res, _partialBookUpdate);
 };
 
-let partialUpdateOne = function (req, res) {
-  BookUpdate = function (req, res, book, response) {
-    if (req.body.title) {
-      book.title = req.body.title;
-    }
-    if (req.body.year) {
-      book.year = req.body.year;
-    }
-    if (req.body.pages) {
-      book.pages = req.body.pages;
-    }
-    if (req.body.author) {
-      book.author = req.body.author;
-    }
-    book.save(function (err, updatedBook) {
-      if (err) {
-        response.status = 500;
-        response.message = err;
-      }
-      res.status(response.status).json(response.message);
-    });
-  };
-  _updateOne(req, res, bookUpdate);
+const _fillResponse = function (response, status, message) {
+  response.status = status;
+  response.message = message;
 };
 
-// let fullUpdateOne = function (req, res) {
-//   const bookId = req.params.bookId;
-//   let response = {
-//     status: 200,
-//     message: {},
-//   };
-//   if (mongoose.isValidObjectId(bookId)) {
-//     Book.findById(bookId).exec(function (err, book) {
-//       if (!book) {
-//         response.status = 404;
-//         response.message = { message: "book with given id is not in db" };
-//       } else {
-//         book.title = req.body.title;
-//         book.year = req.body.year;
-//         book.pages = req.body.pages;
-//         book.author = req.body.author;
-//         book.save(function (err, updatedBook) {
-//           if (err) {
-//             response.status = 500;
-//             response.message = err;
-//           } else {
-//             response.status = 202;
-//             response.message = updatedBook;
-//           }
-//           res.status(response.status).send(response.message);
-//         });
-//       }
-//     });
-//   }
-// };
+const _sendResponse = function (res, response) {
+  return res.status(response.status).json(response.message);
+};
 
-// let partialUpdateOne = function (req, res) {
-//   console.log("Partial update of One Book");
+const _checkHardening = function (req, res, response) {
+  let error = false;
+  let offset = parseInt(process.env.DEFAULT_OFFSET, process.env.CONVERSION_BASE);
+  let count = parseInt(process.env.DEFAULT_COUNT, process.env.CONVERSION_BASE);
+  const max = parseInt(process.env.MAX, process.env.CONVERSION_BASE);
 
-//   const bookId = req.params.bookId;
-//   if (mongoose.isValidObjectId(bookId)) {
-//     Book.findById(bookId).exec(function (err, book) {
-//       const response = {
-//         status: 200,
-//         message: book,
-//       };
+  if (req.query && req.query.offset) {
+    offset = parseInt(req.query.offset, process.env.CONVERSION_BASE);
+  }
 
-//       if (!book) {
-//         console.log("Book not found");
-//         response.status = 404;
-//         response.message = { message: "book with the given Id not found" };
-//       } else {
-//         if (req.body.title) {
-//           book.title = req.body.title;
-//         }
+  if (req.query && req.query.count) {
+    count = parseInt(req.query.count, process.env.CONVERSION_BASE);
+  }
 
-//         if (req.body.year) {
-//           book.year = req.body.year;
-//         }
+  if (isNaN(offset) || isNaN(count)) {
+    _fillResponse(response, process.env.STATUS_CLIENT_ERROR, {
+      message: process.env.OFFSET_COUNT_MESSAGE,
+    });
+    error = true;
+  }
 
-//         if (req.body.pages) {
-//           book.pages = req.body.pages;
-//         }
+  if (count > max) {
+    _fillResponse(response, process.env.STATUS_CLIENT_ERROR, {
+      message: process.env.COUNT_EXCEED_MESSAGE,
+      max,
+    });
+    error = true;
+  }
 
-//         if (req.body.author) {
-//           book.author = req.body.author;
-//         }
-
-//         book.save(function (err, updatedBook) {
-//           if (err) {
-//             response.status = 500;
-
-//             response.message = err;
-//           } else {
-//             response.status = 202;
-
-//             response.status = updatedBook;
-//           }
-//         });
-
-//         res.status(response.status).json(response.message);
-//       }
-//     });
-//   }
-// };
-
+  const limit = { count: count, offset: offset, error: error };
+  return limit;
+};
 module.exports = {
   getAll,
   getOne,

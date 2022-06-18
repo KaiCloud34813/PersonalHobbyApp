@@ -1,0 +1,17 @@
+<h1>
+  {{ book.title }}
+  <button routerLink="/books/{{ book._id }}/edit">Edit</button>
+</h1>
+<br />
+Year: {{ book.year }}<br />
+Pages: {{ book.pages }}<br />
+<p>Authors:</p>
+<button routerLink="/books/{{ book._id }}/add">add Author</button><br />
+<ul>
+  <li *ngFor="let author of book.author">
+    <a routerLink="/books/{{ book._id }}/author/{{ author._id }}">
+      {{ author.name }}
+    </a>
+  </li>
+</ul>
+<button (click)="delete(book._id)">delete</button>

@@ -1,169 +1,211 @@
+const { response } = require("express");
 const mongoose = require("mongoose");
 const Book = mongoose.model(process.env.DB_BOOK_MODEL);
 
-module.exports.addOne = function (req, res) {
-  console.log("Add One Author Controller");
+let addOne = function (req, res) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
   const bookId = req.params.bookId;
   Book.findById(bookId)
     .select("author")
-    .exec(function (err, book) {
-      console.log("Found book ", book);
-      const response = { status: 200, message: book };
-      if (err) {
-        console.log("Error finding book");
-        response.status = 500;
-        response.message = err;
-      } else if (!book) {
-        console.log("Error finding book");
-        response.status = 404;
-        response.message = { message: "book ID not found " + bookId };
-      }
-      if (book) {
-        _addAuthor(req, res, book);
+    .exec()
+    .then((book) => {
+      if (!book) {
+        _fillResponse(
+          response,
+          process.env.STATUS_NOT_FOUND,
+          process.env.NOT_FOUND_MESSAGE
+        );
+        _sendResponse(res, response);
       } else {
-        res.status(response.status).json(response.message);
+        _addAuthor(req, res, book);
       }
-    });
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err));
 };
 
 const _addAuthor = function (req, res, book) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
   let a = req.body.name;
   let b = req.body.country;
   book.author.push({ name: a, country: b });
 
-  book.save(function (err, updatedBook) {
-    const response = { status: 200, message: [] };
-    if (err) {
-      response.status = 500;
-      response.message = err;
-    } else {
-      response.status = 201;
-      response.message = updatedBook.author;
-    }
-    res.status(response.status).json(response.message);
-  });
+  book
+    .save()
+    .then((book) => {
+      _fillResponse(response, process.env.STATUS_SUCCESS, book.author);
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
 };
 
-module.exports.getAll = function (req, res) {
-  console.log("Trying to get all the authors of a book");
+let getAll = function (req, res) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
   const bookId = req.params.bookId;
 
   Book.findById(bookId)
     .select("author")
-    .exec(function (err, book) {
-      res.status(200).send(book.author);
-    });
+    .exec()
+    .then((book) => {
+      if (!book) {
+        _fillResponse(
+          response,
+          process.env.STATUS_NOT_FOUND,
+          process.env.NOT_FOUND_MESSAGE
+        );
+      } else {
+        _fillResponse(response, process.env.STATUS_SUCCESS, book.author);
+      }
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
 };
 
-module.exports.getOne = function (req, res) {
+let getOne = function (req, res) {
+  let response = { status: process.env.STATUS_SUCCESS, message: "" };
   const bookId = req.params.bookId;
   const authorId = req.params.authorId;
 
   Book.findById(bookId)
     .select("author")
-    .exec(function (err, book) {
-      res.status(200).send(book.author.id(authorId));
-    });
-};
-
-module.exports.deleteOne = function (req, res) {
-  const bookId = req.params.bookId;
-  const authorId = req.params.authorId;
-
-  //Book.findById(bookId)
-  Book.findById(bookId).exec(function (err, book) {
-    if (err) {
-      console.log(err);
-    } else {
-      Book.updateOne(
-        { _id: bookId },
-        { $pull: { author: { _id: authorId } } },
-        function (err, results) {
-          if (!err) {
-            console.log("successfully deleted");
-            res.send(results);
-          } else {
-            console.log("error in deletion");
-            res.send(err);
-          }
-        }
-      );
-    }
-  });
-};
-
-module.exports.fullUpdateOne = function (req, res) {
-  const bookId = req.params.bookId;
-  const authorId = req.params.authorId;
-  let response = {
-    status: 200,
-    message: {},
-  };
-  if (mongoose.isValidObjectId(bookId) && mongoose.isValidObjectId(authorId)) {
-    Book.findById(bookId).exec(function (err, book) {
-      if (!book) {
-        response.status = 404;
-        response.message = { message: "Book with given id is not in db" };
-      }
-      if (!book.author) {
-        response.status = 404;
-        response.message = { message: "Author with given id is not in db" };
+    .exec()
+    .then((book) => {
+      if (!book.author.id(authorId)) {
+        _fillResponse(
+          response,
+          process.env.STATUS_NOT_FOUND,
+          process.env.NOT_FOUND_MESSAGE
+        );
       } else {
-        book.author.id(authorId).name = req.body.name;
-        book.author.id(authorId).country = req.body.country;
-        book.save(function (err, updatedBook) {
-          const response = {
-            status: 204,
-            message: updatedBook.author.id(authorId),
-          };
-          if (err) {
-            response.status = 500;
-            response.message = err;
-          }
-          //res.status(response.status).send(response.message);
-        });
+        _fillResponse(
+          response,
+          process.env.STATUS_SUCCESS,
+          book.author.id(authorId)
+        );
       }
-      res.status(response.status).send(response.message);
-    });
-  }
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
 };
 
-module.exports.partialUpdateOne = function (req, res) {
+let deleteOne = function (req, res) {
+  let response = { status: process.env.STATUS_SUCCESS, message: "" };
+
   const bookId = req.params.bookId;
   const authorId = req.params.authorId;
-  let response = {
-    status: 200,
-    message: {},
-  };
-  if (mongoose.isValidObjectId(bookId) && mongoose.isValidObjectId(authorId)) {
-    Book.findById(bookId).exec(function (err, book) {
+
+  Book.findById(bookId)
+    .exec()
+    .then((book) => {
       if (!book) {
-        response.status = 404;
-        response.message = { message: "Book with given id is not in db" };
-      }
-      if (!book.author) {
-        response.status = 404;
-        response.message = { message: "Author with given id is not in db" };
+        _fillResponse(
+          response,
+          process.env.STATUS_ERROR,
+          process.env.NOT_FOUND_MESSAGE
+        );
       } else {
-        if (req.body.name) {
-          book.author.id(authorId).name = req.body.name;
-        }
-        if (req.body.country) {
-          book.author.id(authorId).country = req.body.country;
-        }
-        book.save(function (err, updatedBook) {
-          const response = {
-            status: 204,
-            message: updatedBook.author.id(authorId),
-          };
-          if (err) {
-            response.status = 500;
-            response.message = err;
-          }
-          //res.status(response.status).send(response.message);
-        });
+        Book.updateOne(
+          { _id: bookId },
+          { $pull: { author: { _id: authorId } } }
+        )
+          .then((book) =>
+            _fillResponse(
+              response,
+              process.env.STATUS_SUCCESS,
+              book.author.id(authorId)
+            )
+          )
+          .catch((err) =>
+            _fillResponse(response, process.env.STATUS_ERROR, err)
+          );
       }
-      res.status(response.status).send(response.message);
-    });
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
+};
+
+const _updateOne = function (req, res, updatedBookCallBack) {
+  const bookId = req.params.bookId;
+  const response = {
+    status: process.env.STATUS_SUCCESS,
+    message: "",
+  };
+  Book.findById(bookId)
+    .exec()
+    .then((book) => {
+      if (!book) {
+        _fillResponse(
+          response,
+          process.env.STATUS_RES_NOTFOUND,
+          process.env.NOT_FOUND_MESSAGE + bookId
+        );
+        _sendResponse(res, response);
+      } else {
+        updatedBookCallBack(req, res, book);
+      }
+    })
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err));
+};
+
+const _fullAuthorUpdate = function (req, res, book) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
+  const authorId = req.params.authorId;
+  book.author.id(req.params.authorId).name = req.body.name;
+  book.author.id(req.params.authorId).country = req.body.country;
+
+  book
+    .save()
+    .then((book) =>
+      _fillResponse(
+        response,
+        process.env.STATUS_SUCCESS,
+        book.author.id(authorId)
+      )
+    )
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
+};
+const fullUpdateOne = function (req, res) {
+  _updateOne(req, res, _fullAuthorUpdate);
+};
+
+const _partialAuthorUpdate = function (req, res, book) {
+  const response = { status: process.env.STATUS_SUCCESS, message: "" };
+  const authorId = req.params.authorId;
+  if (req.body.name) {
+    book.author.id(authorId).name = req.body.name;
   }
+  if (req.body.country) {
+    book.author.id(authorId).country = req.body.country;
+  }
+  book
+    .save()
+    .then((book) =>
+      _fillResponse(
+        response,
+        process.env.STATUS_SUCCESS,
+        book.author.id(authorId)
+      )
+    )
+    .catch((err) => _fillResponse(response, process.env.STATUS_ERROR, err))
+    .finally(() => _sendResponse(res, response));
+};
+const partialUpdateOne = function (req, res) {
+  _updateOne(req, res, _partialAuthorUpdate);
+};
+
+const _fillResponse = function (response, status, message) {
+  response.status = status;
+  response.message = message;
+};
+
+const _sendResponse = function (res, response) {
+  return res.status(response.status).json(response.message);
+};
+module.exports = {
+  addOne,
+  getOne,
+  getAll,
+  deleteOne,
+  fullUpdateOne,
+  partialUpdateOne,
 };

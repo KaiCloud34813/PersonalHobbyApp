@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 require("./books.model");
+require("./users.model");
 
 mongoose.connect(process.env.DB_URL);
 
